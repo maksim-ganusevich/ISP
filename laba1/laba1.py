@@ -6,7 +6,7 @@ logger = logging.getLogger()
 
 
 def solve(n):
-    return int(((((1+math.sqrt(5))/2)**n)-(((1-math.sqrt(5))/2)**n))/math.sqrt(5))
+    return int(((((1 + math.sqrt(5)) / 2) ** n) - (((1 - math.sqrt(5)) / 2) ** n)) / math.sqrt(5))
 
 
 def main():
