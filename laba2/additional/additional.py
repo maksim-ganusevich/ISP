@@ -56,3 +56,80 @@ def unpack_iterable(obj):
         for key, value in obj.items():
             unpacked_dict[key] = deconvert(value)
         return unpacked_dict
+
+
+def pack_inner_func(obj):
+    return pack_function(FunctionType(obj, {}))
+
+
+def pack_function(obj):
+    result = {"__type__": "function"}
+    if inspect.ismethod(obj):
+        obj = obj.__func__
+    result["__name__"] = obj.__name__
+    globs = get_global_vars(obj)
+    result["__globals__"] = pack_iterable(globs)
+    arguments = {}
+    for (key, value) in inspect.getmembers(obj.__code__):
+        if key.startswith("co_"):
+            if isinstance(value, bytes):
+                value = list(value)
+            if is_iterable(value) and not isinstance(value, str):
+                converted_vals = []
+                for val in value:
+                    if val is not None:
+                        converted_vals.append(convert(val))
+                    else:
+                        converted_vals.append(None)
+                arguments[key] = converted_vals
+                continue
+            arguments[key] = value
+    result["__args__"] = arguments
+    return result
+
+
+def unpack_function(src):
+    arguments = src["__args__"]
+    globs = src["__globals__"]
+    globs["__builtins__"] = builtins
+    for key in src["__globals__"]:
+        if key in arguments["co_names"]:
+            globs[key] = deconvert(src["__globals__"][key])
+
+    temp_consts = []
+    for val in list(arguments["co_consts"]):
+        func = deconvert(val)
+        if is_function(func):
+            val = deconvert(val)
+            temp_consts.append(val.__code__)
+            continue
+        temp_consts.append(val)
+    arguments["co_consts"] = temp_consts
+
+    for val in arguments:
+        if is_iterable(arguments[val]) and not isinstance(arguments[val], str):
+            temp_ls = []
+            for value in arguments[val]:
+                if value == None:
+                    temp_ls.append(None)
+                else:
+                    temp_ls.append(value)
+            arguments[val] = temp_ls
+
+    coded = CodeType(arguments['co_argcount'],
+                     arguments['co_posonlyargcount'],
+                     arguments['co_kwonlyargcount'],
+                     arguments['co_nlocals'],
+                     arguments['co_stacksize'],
+                     arguments['co_flags'],
+                     bytes(arguments['co_code']),
+                     tuple(arguments['co_consts']),
+                     tuple(arguments['co_names']),
+                     tuple(arguments['co_varnames']),
+                     arguments['co_filename'],
+                     arguments['co_name'],
+                     arguments['co_firstlineno'],
+                     bytes(arguments['co_lnotab']),
+                     tuple(arguments['co_freevars']),
+                     tuple(arguments['co_cellvars']))
+    return FunctionType(coded, globs)
