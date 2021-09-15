@@ -133,3 +133,22 @@ def unpack_function(src):
                      tuple(arguments['co_freevars']),
                      tuple(arguments['co_cellvars']))
     return FunctionType(coded, globs)
+
+
+def pack_object(obj):
+    result = {"__type__": "object", "__class__": obj.__class__.__name__}
+    for attr in dir(obj):
+        if not attr.startswith("__"):
+            value = convert(getattr(obj, attr))
+            result[attr] = value
+    return result
+
+
+def unpack_object(src):
+    meta = type(src.get("__class__"), (), {})
+    result = meta()
+    for key, value in src.items():
+        if key == '__class__':
+            continue
+        setattr(result, key, deconvert(value))
+    return result
