@@ -172,3 +172,33 @@ def unpack_class(src):
         vars[attr] = deconvert(value)
     return type(src["__name__"], (), vars)
 
+def convert(obj):
+    if isinstance(obj, primitives):
+        return obj
+    elif obj is None:
+        return None
+    elif is_function(obj):
+        return pack_function(obj)
+    elif inspect.iscode(obj):
+        return pack_inner_func(obj)
+    elif inspect.isclass(obj):
+        return pack_class(obj)
+    elif is_iterable(obj):
+        return pack_iterable(obj)
+    else:
+        return pack_object(obj)
+
+def deconvert(src):
+    if isinstance(src, primitives):
+        return src
+    elif isinstance(src, dict):
+        if "function" in src.values():
+            return unpack_function(src)
+        elif "object" in src.values():
+            return unpack_object(src)
+        elif "class" in src.values():
+            return unpack_class(src)
+        else:
+            return unpack_iterable(src)
+    elif is_iterable(src):
+        return unpack_iterable(src)
