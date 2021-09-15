@@ -152,3 +152,23 @@ def unpack_object(src):
             continue
         setattr(result, key, deconvert(value))
     return result
+
+
+def pack_class(obj):
+    result = {'__type__': 'class', '__name__': obj.__name__}
+    for attr in dir(obj):
+        if attr == "__init__":
+            attr_value = getattr(obj, attr)
+            result[attr] = pack_function(attr_value)
+        if not attr.startswith('__'):
+            attr_value = getattr(obj, attr)
+            result[attr] = convert(attr_value)
+    return result
+
+
+def unpack_class(src):
+    vars = {}
+    for attr, value in src.items():
+        vars[attr] = deconvert(value)
+    return type(src["__name__"], (), vars)
+
